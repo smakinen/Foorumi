@@ -9,8 +9,31 @@ var Models = require('../models');
 router.post('/', function (req, res, next) {
     // Lisää tämä käyttäjä (Vinkki: create), muista kuitenkin sitä ennen varmistaa, että käyttäjänimi ei ole jo käytössä! (Vinkki: findOne)
     var userToAdd = req.body;
+
+    console.log(userToAdd);
+
+    // username
+    Models.User.findOne({
+        where: {username: userToAdd.username}
+    }).then(function (user) {
+
+        // user already exists (bad input)
+        if (user) {
+            res.status(400).json({error: 'Käyttäjätunnus on jo käytössä!'});
+        }
+
+        // create new user if name not taken
+        else {
+            Models.User.create(userToAdd).then(function (newUser) {
+                req.session.userId = newUser.id;
+                res.json(newUser);
+            });
+        }
+
+    });
+
     // Palauta vastauksena lisätty käyttäjä
-    res.send(200);
+    //res.send(200);
 });
 
 // POST /users/authenticate
@@ -42,15 +65,22 @@ router.post('/authenticate', function (req, res, next) {
 
 // GET /users/logged-in
 router.get('/logged-in', function (req, res, next) {
+
     var loggedInId = req.session.userId ? req.session.userId : null;
 
-    if (loggedInId == null) {
+    if (loggedInId === null) {
         res.json({});
-    } else {
-        // Hae käyttäjä loggedInId-muuttujan arvon perusteella (Vinkki: findOne)
     }
 
-    res.send(200);
+    else {
+        Models.User.findOne({where: {id: loggedInId}}).then(function (user) {
+            if (user) {
+                res.json(user);
+            } else {
+                res.json({});
+            }
+        });
+    }
 });
 
 // GET /users/logout
